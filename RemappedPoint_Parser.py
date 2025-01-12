@@ -1,7 +1,10 @@
 import rhinoscriptsyntax as rs
 
 def remap(value, old_min, old_max, new_min, new_max):
-    """Remaps a value from one range to another."""
+    """Remaps a value from one range to another, handling zero-division errors."""
+    if old_max == old_min:
+        # If the range is zero, map all values to the midpoint of the target range
+        return (new_min + new_max) / 2
     return ((value - old_min) / (old_max - old_min)) * (new_max - new_min) + new_min
 
 def create_polylines_from_array_with_remap(data_array):
