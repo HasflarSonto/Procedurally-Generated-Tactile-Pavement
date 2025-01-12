@@ -49,8 +49,7 @@ List<Polyline> CreatePolylinesFromDataTree(DataTree<string> dataTree)
 }
 
 // Grasshopper Inputs
-// Cast 'x' to DataTree<string>
 DataTree<string> dataTree = x as DataTree<string>;
 
-// Process the data tree and create polylines
-A = CreatePolylinesFromDataTree(dataTree);  // Assign result to output 'A'
+// Process the data tree and assign the output
+curves = CreatePolylinesFromDataTree(dataTree);  // Replace 'curves' with your output name
