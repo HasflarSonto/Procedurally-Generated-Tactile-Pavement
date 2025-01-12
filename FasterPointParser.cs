@@ -6,45 +6,49 @@ List<Polyline> CreatePolylinesFromArray(string[] inputArray)
 {
     List<Polyline> polylines = new List<Polyline>();
 
-    foreach (string item in inputArray)
+    foreach (string inputData in inputArray)
     {
-        if (string.IsNullOrWhiteSpace(item)) continue;
+        if (string.IsNullOrWhiteSpace(inputData)) continue;
 
-        try
+        // Clean and prepare the input string
+        string cleanedData = inputData.Trim(new char[] { '[', ']' }); // Remove outer brackets
+        string[] coordinateGroups = cleanedData.Split(new string[] { "','" }, StringSplitOptions.RemoveEmptyEntries);
+
+        List<Point3d> points = new List<Point3d>();
+
+        foreach (string coordString in coordinateGroups)
         {
-            // Split the string into coordinate groups if needed
-            string[] groups = item.Split(new[] { "}, {" }, StringSplitOptions.RemoveEmptyEntries);
-
-            List<Point3d> points = new List<Point3d>();
-
-            foreach (string group in groups)
+            try
             {
-                // Clean and parse each coordinate group
-                string cleanGroup = group.Trim(new char[] { '{', '}', '[', ']', ' ' });
-                string[] coords = cleanGroup.Split(',');
+                // Parse each coordinate string
+                string cleanCoord = coordString.Trim(new char[] { '{', '}', ' ', '\'' });
+                string[] parts = cleanCoord.Split(',');
 
-                if (coords.Length == 3)
+                if (parts.Length == 3)
                 {
-                    double x = double.Parse(coords[0]);
-                    double y = double.Parse(coords[1]);
-                    double z = double.Parse(coords[2]);
+                    // Convert to numeric values
+                    double x = double.Parse(parts[0]);
+                    double y = double.Parse(parts[1]);
+                    double z = double.Parse(parts[2]);
 
+                    // Add the point to the list
                     points.Add(new Point3d(x, y, z));
                 }
             }
-
-            if (points.Count > 1)
+            catch
             {
-                // Close the polyline by adding the first point to the end
-                points.Add(points[0]);
-                polylines.Add(new Polyline(points));
+                // Skip malformed entries
+                Rhino.RhinoApp.WriteLine($"Skipping malformed entry: {coordString}");
+                continue;
             }
         }
-        catch
+
+        // Create a polyline if points are available
+        if (points.Count > 1)
         {
-            // Skip malformed items and log the issue
-            Rhino.RhinoApp.WriteLine($"Skipped malformed entry: {item}");
-            continue;
+            // Close the polyline by adding the first point to the end
+            points.Add(points[0]);
+            polylines.Add(new Polyline(points));
         }
     }
 
@@ -52,12 +56,10 @@ List<Polyline> CreatePolylinesFromArray(string[] inputArray)
 }
 
 // Grasshopper Input
-Rhino.RhinoApp.WriteLine($"Input 'x' type: {x?.GetType()}");  // Inspect the type of the input
-
 if (x is string[] inputArray)
 {
-    // If the input is an array, process it directly
-    curves = CreatePolylinesFromArray(inputArray);
+    // If the input is an array, process it
+    curves = CreatePolylinesFromArray(inputArray); // Replace 'curves' with the output name in your Grasshopper script
 }
 else
 {
