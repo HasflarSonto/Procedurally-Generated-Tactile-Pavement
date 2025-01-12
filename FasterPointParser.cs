@@ -1,16 +1,19 @@
 using System;
 using System.Collections.Generic;
+using Grasshopper;
+using Grasshopper.Kernel.Data;
+using Grasshopper.Kernel.Types;
 using Rhino.Geometry;
 
-private List<Polyline> CreatePolylinesFromDataTree(List<List<string>> dataTree)
+List<Polyline> CreatePolylinesFromDataTree(DataTree<string> dataTree)
 {
     List<Polyline> polylines = new List<Polyline>();
 
-    foreach (var branch in dataTree)
+    foreach (GH_Path path in dataTree.Paths)
     {
         List<Point3d> points = new List<Point3d>();
 
-        foreach (var item in branch)
+        foreach (string item in dataTree.Branch(path))
         {
             try
             {
@@ -46,16 +49,8 @@ private List<Polyline> CreatePolylinesFromDataTree(List<List<string>> dataTree)
 }
 
 // Grasshopper Inputs
-// 'x' is a DataTree<string> containing coordinate strings
-
-// Convert the input DataTree into a C# List<List<string>>
-List<List<string>> dataTree = new List<List<string>>();
-
-foreach (var path in x.Paths)
-{
-    List<string> branch = new List<string>(x.Branch(path));
-    dataTree.Add(branch);
-}
+// Cast 'x' to DataTree<string>
+DataTree<string> dataTree = x as DataTree<string>;
 
 // Process the data tree and create polylines
-A = CreatePolylinesFromDataTree(dataTree);  // Output polylines to 'A'
+A = CreatePolylinesFromDataTree(dataTree);  // Assign result to output 'A'
