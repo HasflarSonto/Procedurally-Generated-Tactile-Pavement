@@ -9,7 +9,7 @@ List<Polyline> CreatePolylinesFromDataTree(DataTree<string> dataTree)
 {
     List<Polyline> polylines = new List<Polyline>();
 
-    if (dataTree == null || dataTree.Count == 0)
+    if (dataTree == null || dataTree.BranchCount == 0)
     {
         throw new ArgumentException("The input data tree is null or contains no data.");
     }
@@ -20,11 +20,12 @@ List<Polyline> CreatePolylinesFromDataTree(DataTree<string> dataTree)
 
         foreach (string item in dataTree.Branch(path))
         {
+            if (string.IsNullOrWhiteSpace(item)) continue;
+
             try
             {
-                // Clean and parse the coordinate string
-                string cleanItem = item.Trim(new char[] { '{', '}', '[', ']', ' ' });
-                string[] coords = cleanItem.Split(',');
+                // Parse the coordinate string
+                string[] coords = item.Trim(new char[] { '{', '}', '[', ']', ' ' }).Split(',');
 
                 if (coords.Length == 3)
                 {
@@ -37,7 +38,8 @@ List<Polyline> CreatePolylinesFromDataTree(DataTree<string> dataTree)
             }
             catch
             {
-                // Skip malformed items
+                // Skip malformed items and log the issue
+                Rhino.RhinoApp.WriteLine($"Skipped malformed coordinate: {item}");
                 continue;
             }
         }
@@ -59,7 +61,7 @@ if (x == null)
     throw new ArgumentException("Input 'x' is null. Please provide a valid data tree.");
 }
 
-// Cast 'x' to DataTree<string> safely
+// Explicitly cast 'x' to DataTree<string>
 DataTree<string> dataTree = x as DataTree<string>;
 
 if (dataTree == null)
