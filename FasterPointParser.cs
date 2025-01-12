@@ -9,9 +9,9 @@ List<Polyline> CreatePolylinesFromDataTree(DataTree<string> dataTree)
 {
     List<Polyline> polylines = new List<Polyline>();
 
-    if (dataTree == null || dataTree.PathCount == 0)
+    if (dataTree == null || dataTree.Count == 0)
     {
-        throw new ArgumentException("The input data tree is null or empty.");
+        throw new ArgumentException("The input data tree is null or contains no data.");
     }
 
     foreach (GH_Path path in dataTree.Paths)
