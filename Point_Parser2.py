@@ -13,7 +13,8 @@ def create_polylines_from_array(data_array):
     polylines = []
 
     for data_string in data_array:
-        if not data_string:
+        if not data_string or not data_string.strip():
+            print("Skipping empty or null entry")
             continue  # Skip empty strings
 
         # Step 1: Clean and split the data string
@@ -25,17 +26,30 @@ def create_polylines_from_array(data_array):
             try:
                 # Step 2: Clean each coordinate string and split into x, y, z
                 clean_coord = coord_string.strip(" {}'")
+                if not clean_coord or ',' not in clean_coord:
+                    print(f"Skipping malformed entry: {coord_string}")
+                    continue
+
                 x, y, z = map(float, clean_coord.split(","))
                 points.append((x, y, z))
             except ValueError:
                 print(f"Skipping malformed entry: {coord_string}")
                 continue
 
-        # Step 3: Create a closed polyline if points are available
+        # Step 3: Validate and create a polyline
         if len(points) > 1:
-            points.append(points[0])  # Close the polyline
-            polyline = rs.AddPolyline(points)
-            polylines.append(polyline)
+            try:
+                points.append(points[0])  # Close the polyline
+                polyline = rs.AddPolyline(points)
+                if polyline:
+                    polylines.append(polyline)
+                else:
+                    print("Failed to create polyline for points")
+            except Exception as e:
+                print(f"Error creating polyline: {e}")
+                continue
+        else:
+            print(f"Skipping invalid points list: {points}")
 
     return polylines
 
