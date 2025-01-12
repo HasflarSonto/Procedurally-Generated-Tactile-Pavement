@@ -9,6 +9,11 @@ List<Polyline> CreatePolylinesFromDataTree(DataTree<string> dataTree)
 {
     List<Polyline> polylines = new List<Polyline>();
 
+    if (dataTree == null || dataTree.PathCount == 0)
+    {
+        throw new ArgumentException("The input data tree is null or empty.");
+    }
+
     foreach (GH_Path path in dataTree.Paths)
     {
         List<Point3d> points = new List<Point3d>();
@@ -49,7 +54,18 @@ List<Polyline> CreatePolylinesFromDataTree(DataTree<string> dataTree)
 }
 
 // Grasshopper Inputs
+if (x == null)
+{
+    throw new ArgumentException("Input 'x' is null. Please provide a valid data tree.");
+}
+
+// Cast 'x' to DataTree<string> safely
 DataTree<string> dataTree = x as DataTree<string>;
 
+if (dataTree == null)
+{
+    throw new ArgumentException("Failed to cast input 'x' to DataTree<string>. Check the input type.");
+}
+
 // Process the data tree and assign the output
-curves = CreatePolylinesFromDataTree(dataTree);  // Replace 'curves' with your output name
+curves = CreatePolylinesFromDataTree(dataTree);  // Replace 'curves' with your Grasshopper output name
