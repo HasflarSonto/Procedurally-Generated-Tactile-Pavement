@@ -1,31 +1,27 @@
 using System;
 using System.Collections.Generic;
-using Grasshopper;
-using Grasshopper.Kernel.Data;
-using Grasshopper.Kernel.Types;
 using Rhino.Geometry;
 
-List<Polyline> CreatePolylinesFromDataTree(DataTree<string> dataTree)
+List<Polyline> CreatePolylinesFromArray(string[] inputArray)
 {
     List<Polyline> polylines = new List<Polyline>();
 
-    if (dataTree == null || dataTree.BranchCount == 0)
+    foreach (string item in inputArray)
     {
-        throw new ArgumentException("The input data tree is null or contains no data.");
-    }
+        if (string.IsNullOrWhiteSpace(item)) continue;
 
-    foreach (GH_Path path in dataTree.Paths)
-    {
-        List<Point3d> points = new List<Point3d>();
-
-        foreach (string item in dataTree.Branch(path))
+        try
         {
-            if (string.IsNullOrWhiteSpace(item)) continue;
+            // Split the string into coordinate groups if needed
+            string[] groups = item.Split(new[] { "}, {" }, StringSplitOptions.RemoveEmptyEntries);
 
-            try
+            List<Point3d> points = new List<Point3d>();
+
+            foreach (string group in groups)
             {
-                // Parse the coordinate string
-                string[] coords = item.Trim(new char[] { '{', '}', '[', ']', ' ' }).Split(',');
+                // Clean and parse each coordinate group
+                string cleanGroup = group.Trim(new char[] { '{', '}', '[', ']', ' ' });
+                string[] coords = cleanGroup.Split(',');
 
                 if (coords.Length == 3)
                 {
@@ -36,38 +32,34 @@ List<Polyline> CreatePolylinesFromDataTree(DataTree<string> dataTree)
                     points.Add(new Point3d(x, y, z));
                 }
             }
-            catch
+
+            if (points.Count > 1)
             {
-                // Skip malformed items and log the issue
-                Rhino.RhinoApp.WriteLine($"Skipped malformed coordinate: {item}");
-                continue;
+                // Close the polyline by adding the first point to the end
+                points.Add(points[0]);
+                polylines.Add(new Polyline(points));
             }
         }
-
-        if (points.Count > 1)
+        catch
         {
-            // Close the polyline by adding the first point to the end
-            points.Add(points[0]);
-            polylines.Add(new Polyline(points));
+            // Skip malformed items and log the issue
+            Rhino.RhinoApp.WriteLine($"Skipped malformed entry: {item}");
+            continue;
         }
     }
 
     return polylines;
 }
 
-// Grasshopper Inputs
-if (x == null)
+// Grasshopper Input
+Rhino.RhinoApp.WriteLine($"Input 'x' type: {x?.GetType()}");  // Inspect the type of the input
+
+if (x is string[] inputArray)
 {
-    throw new ArgumentException("Input 'x' is null. Please provide a valid data tree.");
+    // If the input is an array, process it directly
+    curves = CreatePolylinesFromArray(inputArray);
 }
-
-// Explicitly cast 'x' to DataTree<string>
-DataTree<string> dataTree = x as DataTree<string>;
-
-if (dataTree == null)
+else
 {
-    throw new ArgumentException("Failed to cast input 'x' to DataTree<string>. Check the input type.");
+    throw new ArgumentException("Input 'x' is not a valid string array. Please check the input format.");
 }
-
-// Process the data tree and assign the output
-curves = CreatePolylinesFromDataTree(dataTree);  // Replace 'curves' with your Grasshopper output name
