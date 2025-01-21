@@ -1,6 +1,7 @@
 import rhinoscriptsyntax as rs
-import Grasshopper as gh
-from Grasshopper.DataTree import DataTree
+import clr  # Enables access to .NET libraries
+clr.AddReference("Grasshopper")
+from Grasshopper import DataTree
 from Grasshopper.Kernel.Data import GH_Path
 
 def remap(value, old_min, old_max, new_min, new_max):
