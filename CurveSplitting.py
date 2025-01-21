@@ -1,4 +1,7 @@
 import rhinoscriptsyntax as rs
+import Grasshopper as gh
+from Grasshopper.DataTree import DataTree
+from Grasshopper.Kernel.Data import GH_Path
 
 def remap(value, old_min, old_max, new_min, new_max):
     """Remaps a value from one range to another, handling zero-division errors."""
@@ -30,27 +33,27 @@ def split_into_curves(points):
 
     return curves
 
-def create_polylines_from_array_with_remap(data_array):
+def create_datatree_from_curves(data_array):
     """
     Parses an array of strings containing coordinate data, splits into curves, remaps x and y, 
-    and returns a nested list of polyline GUIDs.
+    and returns a Grasshopper DataTree of polyline GUIDs.
     
     Args:
         data_array (list): An array of strings, each containing coordinate data.
     
     Returns:
-        list: A nested list of polyline GUIDs, grouped by row.
+        DataTree: A Grasshopper DataTree containing polyline GUIDs.
     """
     all_points = []  # To store all points for calculating bounds
-    row_polylines = []  # To store curves for each row
+    data_tree = DataTree[object]()  # Initialize a DataTree
 
     # Step 1: Parse the input data
-    for data_string in data_array:
+    for row_index, data_string in enumerate(data_array):
         if not data_string or not data_string.strip():
-            print("Skipping empty or null entry")
+            print(f"Skipping empty or null entry at row {row_index}")
             continue
 
-        print(f"Processing data string: {data_string[:100]}...")  # Log the start of processing
+        print(f"Processing data string at row {row_index}: {data_string[:100]}...")  # Log processing
         coordinate_strings = clean_and_split(data_string)  # Clean and split the data string
 
         points = []
@@ -71,9 +74,8 @@ def create_polylines_from_array_with_remap(data_array):
             # Step 2: Split into curves
             curves = split_into_curves(points)
 
-            # Step 3: Remap and create polylines for each curve
-            row_curve_polylines = []
-            for curve_points in curves:
+            # Step 3: Remap and add polylines to the DataTree
+            for curve_index, curve_points in enumerate(curves):
                 remapped_points = [
                     (
                         remap(p[0], min(p[0] for p in all_points), max(p[0] for p in all_points), 0, 100),  # Remap x
@@ -84,16 +86,14 @@ def create_polylines_from_array_with_remap(data_array):
                 ]
                 polyline = rs.AddPolyline(remapped_points)
                 if polyline:
-                    row_curve_polylines.append(polyline)
+                    path = GH_Path(row_index, curve_index)  # Create a path for the current curve
+                    data_tree.Add(polyline, path)
 
-            # Add the row's curves to the final output
-            row_polylines.append(row_curve_polylines)
-
-    return row_polylines
+    return data_tree
 
 # Grasshopper Input
 if isinstance(x, list):
-    # Process the input array and create polylines
-    a = create_polylines_from_array_with_remap(x)
+    # Process the input array and create a DataTree of polylines
+    a = create_datatree_from_curves(x)
 else:
     a = "Input 'x' is not a valid array. Please provide an array of strings."
