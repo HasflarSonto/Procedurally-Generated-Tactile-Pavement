@@ -15,27 +15,28 @@ def clean_and_split(data_string):
     cleaned_string = data_string.strip("[]")  # Remove outer brackets
     return [coord.strip(" {}'") for coord in cleaned_string.split("', '")]
 
-def split_into_curves(points):
+def process_row(points):
     """
-    Splits points into multiple curves based on repeated points.
-    Starts the next curve from the point after the repeated point.
+    Splits a row of points into multiple closed curves based on repeated points.
+    Whenever a repeated point is detected, a closed curve is created.
     """
     curves = []
     current_curve = []
+    seen_points = set()
 
-    i = 0
-    while i < len(points):
-        current_curve.append(points[i])
-        # Check for repeated point
-        if i < len(points) - 1 and points[i + 1] == points[i]:
-            # End the current curve
-            curves.append(current_curve)
-            current_curve = []  # Start a new curve
-            i += 2  # Skip the repeated point and start from the next point
+    for i, point in enumerate(points):
+        if point in seen_points:
+            # Repeated point found: finalize current curve
+            current_curve.append(point)  # Close the curve with the repeated point
+            curves.append(current_curve)  # Save the curve
+            current_curve = points[i + 1:]  # Start a new curve from the next point
+            seen_points = set(current_curve)  # Reset seen points for the new curve
+            break  # Restart processing from the new starting point
         else:
-            i += 1
+            current_curve.append(point)
+            seen_points.add(point)
 
-    # Add the last curve if it's not empty
+    # Add the remaining points as a curve if not empty
     if current_curve:
         curves.append(current_curve)
 
@@ -79,8 +80,8 @@ def create_datatree_from_curves(data_array):
                 continue
 
         if points:
-            # Step 2: Split into curves
-            curves = split_into_curves(points)
+            # Step 2: Process the row to split into curves
+            curves = process_row(points)
 
             # Step 3: Remap and add polylines to the DataTree
             for curve_index, curve_points in enumerate(curves):
