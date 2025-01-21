@@ -12,21 +12,17 @@ def clean_and_split(data_string):
     return [coord.strip(" {}'") for coord in cleaned_string.split("', '")]
 
 def split_into_curves(points):
-    """Splits points into multiple curves based on repeating points."""
+    """Splits points into multiple curves based on repeated points."""
     curves = []
     current_curve = []
-    seen_points = set()
 
-    for point in points:
-        if point in seen_points:
-            # If the point is repeating, close the current curve
-            current_curve.append(point)
+    for i, point in enumerate(points):
+        current_curve.append(point)
+        # Check if the next point is the same as the current point (repeated)
+        if i < len(points) - 1 and points[i + 1] == point:
+            # End the current curve
             curves.append(current_curve)
-            current_curve = [point]  # Start a new curve with the repeated point
-            seen_points = set()
-        else:
-            current_curve.append(point)
-            seen_points.add(point)
+            current_curve = []  # Start a new curve with the next point
 
     # Add the last curve if it's not empty
     if current_curve:
