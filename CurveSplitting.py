@@ -1,5 +1,5 @@
 import rhinoscriptsyntax as rs
-import clr  # Import .NET interop library
+import clr
 clr.AddReference("Grasshopper")
 from Grasshopper import DataTree
 from Grasshopper.Kernel.Data import GH_Path
@@ -16,18 +16,24 @@ def clean_and_split(data_string):
     return [coord.strip(" {}'") for coord in cleaned_string.split("', '")]
 
 def split_into_curves(points):
-    """Splits points into multiple curves based on repeated points."""
+    """
+    Splits points into multiple curves based on repeated points.
+    Starts the next curve from the point after the repeated point.
+    """
     curves = []
     current_curve = []
 
-    for i, point in enumerate(points):
-        current_curve.append(point)
-        # Check if the current point is repeated
-        if i < len(points) - 1 and points[i + 1] == point:
-            # Add the current curve as a closed loop
+    i = 0
+    while i < len(points):
+        current_curve.append(points[i])
+        # Check for repeated point
+        if i < len(points) - 1 and points[i + 1] == points[i]:
+            # End the current curve
             curves.append(current_curve)
-            current_curve = []  # Start a new curve after the repeated point
-            continue  # Move to the next point after the repeated point
+            current_curve = []  # Start a new curve
+            i += 2  # Skip the repeated point and start from the next point
+        else:
+            i += 1
 
     # Add the last curve if it's not empty
     if current_curve:
@@ -35,19 +41,19 @@ def split_into_curves(points):
 
     return curves
 
-def create_datatree_by_sidewalk(data_array):
+def create_datatree_from_curves(data_array):
     """
-    Parses an array of strings containing coordinate data, splits rows into multiple curves, remaps x and y, 
+    Parses an array of strings containing coordinate data, splits into curves, remaps x and y, 
     and returns a Grasshopper DataTree of polyline GUIDs.
     
     Args:
         data_array (list): An array of strings, each containing coordinate data.
     
     Returns:
-        DataTree: A Grasshopper DataTree containing polyline GUIDs grouped by row and curve.
+        DataTree: A Grasshopper DataTree containing polyline GUIDs.
     """
     all_points = []  # To store all points for calculating bounds
-    data_tree = DataTree[object]()  # Initialize a Grasshopper DataTree
+    data_tree = DataTree[object]()  # Initialize a DataTree
 
     # Step 1: Parse the input data
     for row_index, data_string in enumerate(data_array):
@@ -76,7 +82,7 @@ def create_datatree_by_sidewalk(data_array):
             # Step 2: Split into curves
             curves = split_into_curves(points)
 
-            # Step 3: Remap and create polylines for each curve
+            # Step 3: Remap and add polylines to the DataTree
             for curve_index, curve_points in enumerate(curves):
                 remapped_points = [
                     (
@@ -88,7 +94,7 @@ def create_datatree_by_sidewalk(data_array):
                 ]
                 polyline = rs.AddPolyline(remapped_points)
                 if polyline:
-                    path = GH_Path(row_index, curve_index)  # Create a unique path for each curve
+                    path = GH_Path(row_index)  # Create a path for the current row
                     data_tree.Add(polyline, path)
 
     return data_tree
@@ -96,6 +102,6 @@ def create_datatree_by_sidewalk(data_array):
 # Grasshopper Input
 if isinstance(x, list):
     # Process the input array and create a DataTree of polylines
-    a = create_datatree_by_sidewalk(x)
+    a = create_datatree_from_curves(x)
 else:
     a = "Input 'x' is not a valid array. Please provide an array of strings."
