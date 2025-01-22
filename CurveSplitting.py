@@ -24,17 +24,18 @@ def process_row(points):
     current_curve = []
     seen_points = set()
 
-    for i, point in enumerate(points):
-        if point in seen_points:
-            # Repeated point found: finalize current curve
-            current_curve.append(point)  # Close the curve with the repeated point
-            curves.append(current_curve)  # Save the curve
-            current_curve = points[i + 1:]  # Start a new curve from the next point
-            seen_points = set(current_curve)  # Reset seen points for the new curve
-            break  # Restart processing from the new starting point
+    i = 0
+    while i < len(points):
+        if points[i] in seen_points:
+            # Repeated point found: finalize the current curve
+            current_curve.append(points[i])  # Close the curve with the repeated point
+            curves.append(current_curve)  # Save the current curve
+            current_curve = []  # Start a new curve
+            seen_points.clear()  # Reset the seen points
         else:
-            current_curve.append(point)
-            seen_points.add(point)
+            current_curve.append(points[i])
+            seen_points.add(points[i])
+        i += 1
 
     # Add the remaining points as a curve if not empty
     if current_curve:
@@ -53,42 +54,61 @@ def create_datatree_from_curves(data_array):
     Returns:
         DataTree: A Grasshopper DataTree containing polyline GUIDs.
     """
-    all_points = []  # To store all points for calculating bounds
+    all_points = []  # To store all points for calculating global bounds
     data_tree = DataTree[object]()  # Initialize a DataTree
 
-    # Step 1: Parse the input data
-    for row_index, data_string in enumerate(data_array):
+    # Step 1: Parse all rows to gather global bounds
+    for data_string in data_array:
         if not data_string or not data_string.strip():
-            print(f"Skipping empty or null entry at row {row_index}")
             continue
 
-        print(f"Processing data string at row {row_index}: {data_string[:100]}...")  # Log processing
         coordinate_strings = clean_and_split(data_string)  # Clean and split the data string
 
+        for coord_string in coordinate_strings:
+            try:
+                if not coord_string or ',' not in coord_string:
+                    continue
+                x, y, z = map(float, coord_string.split(","))
+                all_points.append((x, y, z))
+            except ValueError:
+                continue
+
+    # Global bounds for remapping
+    if not all_points:
+        print("No valid points found in the input.")
+        return data_tree
+
+    global_min_x = min(p[0] for p in all_points)
+    global_max_x = max(p[0] for p in all_points)
+    global_min_y = min(p[1] for p in all_points)
+    global_max_y = max(p[1] for p in all_points)
+
+    # Step 2: Process each row for curve splitting and remapping
+    for row_index, data_string in enumerate(data_array):
+        if not data_string or not data_string.strip():
+            continue
+
+        coordinate_strings = clean_and_split(data_string)  # Clean and split the data string
         points = []
         for coord_string in coordinate_strings:
             try:
                 if not coord_string or ',' not in coord_string:
-                    print(f"Skipping malformed entry: {coord_string}")
                     continue
-
                 x, y, z = map(float, coord_string.split(","))
                 points.append((x, y, z))
-                all_points.append((x, y, z))
             except ValueError:
-                print(f"Skipping malformed entry: {coord_string}")
                 continue
 
         if points:
-            # Step 2: Process the row to split into curves
+            # Split into curves
             curves = process_row(points)
 
-            # Step 3: Remap and add polylines to the DataTree
+            # Remap and add curves to the DataTree
             for curve_index, curve_points in enumerate(curves):
                 remapped_points = [
                     (
-                        remap(p[0], min(p[0] for p in all_points), max(p[0] for p in all_points), 0, 100),  # Remap x
-                        remap(p[1], min(p[1] for p in all_points), max(p[1] for p in all_points), 0, 100),  # Remap y
+                        remap(p[0], global_min_x, global_max_x, 0, 100),  # Remap x globally
+                        remap(p[1], global_min_y, global_max_y, 0, 100),  # Remap y globally
                         0  # Keep z at 0
                     )
                     for p in curve_points
